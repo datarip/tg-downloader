@@ -4,6 +4,8 @@ import json
 import os
 import sys
 
+import pytest
+
 import tg_downloader.config as config
 from tg_downloader.config import (
     DEFAULT_CONFIG,
@@ -157,6 +159,9 @@ def test_mac_windows_use_home_downloads(monkeypatch):
     assert default_download_dir() == os.path.join(os.path.expanduser("~"), "Downloads", "TG")
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="XDG paths are Unix-only; Windows uses ~/Downloads"
+)
 def test_bsd_uses_xdg_not_bare_downloads(monkeypatch, tmp_path):
     """FreeBSD (sys.platform 'freebsd14') is Unix-like, not Windows/macOS, so it
     must take the XDG path and honour a localised user-dirs.dirs, same as Linux."""
@@ -176,6 +181,9 @@ def test_xdg_honours_env_var_first(monkeypatch, tmp_path):
     assert _xdg_download_dir() == str(target)
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="XDG paths are Unix-only; Windows uses ~/Downloads"
+)
 def test_xdg_reads_localised_folder_from_user_dirs(monkeypatch, tmp_path):
     """A French desktop records ~/Téléchargements in user-dirs.dirs; we honour it."""
     _clear_xdg_env(monkeypatch)
@@ -189,6 +197,9 @@ def test_xdg_reads_localised_folder_from_user_dirs(monkeypatch, tmp_path):
     assert _xdg_download_dir() == str(tmp_path / "Téléchargements")
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="XDG paths are Unix-only; Windows uses ~/Downloads"
+)
 def test_xdg_falls_back_to_home_downloads(monkeypatch, tmp_path):
     """No env var and no user-dirs.dirs → the universal ~/Downloads."""
     _clear_xdg_env(monkeypatch)
