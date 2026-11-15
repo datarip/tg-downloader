@@ -17,6 +17,12 @@ APPIMAGE_TOOL_VERSION="1.9.1"
 APPIMAGE_TOOL_SHA256="ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0"
 APPIMAGE_TOOL_URL="https://github.com/AppImage/appimagetool/releases/download/${APPIMAGE_TOOL_VERSION}/appimagetool-x86_64.AppImage"
 
+# appimagetool otherwise downloads the newest runtime at build time, which would
+# be the one unpinned input left. Pin a dated release and verify it the same way.
+RUNTIME_VERSION="20251108"
+RUNTIME_SHA256="2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d"
+RUNTIME_URL="https://github.com/AppImage/type2-runtime/releases/download/${RUNTIME_VERSION}/runtime-x86_64"
+
 TREE="dist/TDM"
 if [ ! -d "$TREE" ]; then
     echo "make_appimage: $TREE is missing; run packaging/build.py first" >&2
@@ -44,10 +50,17 @@ fi
 echo "$APPIMAGE_TOOL_SHA256  $TOOL" | sha256sum -c -
 chmod +x "$TOOL"
 
+RUNTIME="dist/type2-runtime-$RUNTIME_VERSION-x86_64"
+if [ ! -f "$RUNTIME" ]; then
+    curl -fsSL -o "$RUNTIME" "$RUNTIME_URL"
+fi
+echo "$RUNTIME_SHA256  $RUNTIME" | sha256sum -c -
+
 OUT="dist/release/TDM-$VERSION-linux-x64.AppImage"
 rm -f "$OUT"
-# --appimage-extract-and-run avoids needing FUSE 2 both here and on the runner.
-ARCH=x86_64 "$TOOL" --appimage-extract-and-run dist/appdir "$OUT"
+# The runtime flag must come first so the AppImage runtime consumes it before
+# appimagetool parses the rest. --appimage-extract-and-run avoids needing FUSE 2.
+ARCH=x86_64 "$TOOL" --appimage-extract-and-run --runtime-file "$RUNTIME" dist/appdir "$OUT"
 
 # 3. Smoke-test the packed image, not just the tree it was built from.
 CHECK="$ROOT/dist/appimage-selfcheck.json"
