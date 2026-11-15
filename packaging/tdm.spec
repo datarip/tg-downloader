@@ -45,6 +45,14 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 
+# libgcc_s.so.1 is collected from the build host, and Ubuntu 22.04's copy needs
+# glibc 2.35. Shipping it would drag the whole bundle's glibc floor up from the
+# 2.28 that the cryptg wheel sets. Every glibc distribution ships its own
+# libgcc_s, so drop ours and let the target system provide it.
+a.binaries = [
+    entry for entry in a.binaries if Path(entry[0]).name != "libgcc_s.so.1"
+]
+
 exe = EXE(
     pyz,
     a.scripts,
