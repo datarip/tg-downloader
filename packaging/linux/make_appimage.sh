@@ -58,8 +58,9 @@ echo "$RUNTIME_SHA256  $RUNTIME" | sha256sum -c -
 
 OUT="dist/release/TDM-$VERSION-linux-x64.AppImage"
 rm -f "$OUT"
-# --appimage-extract-and-run avoids needing FUSE 2 both here and on the runner.
-ARCH=x86_64 "$TOOL" --runtime-file "$RUNTIME" --appimage-extract-and-run dist/appdir "$OUT"
+# The runtime flag must come first so the AppImage runtime consumes it before
+# appimagetool parses the rest. --appimage-extract-and-run avoids needing FUSE 2.
+ARCH=x86_64 "$TOOL" --appimage-extract-and-run --runtime-file "$RUNTIME" dist/appdir "$OUT"
 
 # 3. Smoke-test the packed image, not just the tree it was built from.
 CHECK="$ROOT/dist/appimage-selfcheck.json"
