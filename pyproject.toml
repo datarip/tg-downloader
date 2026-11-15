@@ -1,0 +1,60 @@
+[project]
+name = "tg-downloader"
+# Version lives in src/tg_downloader/__init__.py — one place to edit, read by
+# hatchling below and by scripts/check_version.py at release time.
+dynamic = ["version"]
+description = "Review and download files shared in Telegram groups you belong to."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+license-files = ["LICENSE"]
+dependencies = [
+    "cryptg>=0.5.2",
+    "telethon>=1.36",
+]
+
+[project.scripts]
+tg-downloader = "tg_downloader.app:main"   # GUI
+tg-download = "tg_downloader.cli:main"     # headless CLI
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.6",
+]
+packaging = [
+    "pyinstaller>=6.22,<7",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/tg_downloader/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tg_downloader"]
+
+[tool.pytest.ini_options]
+# `src` is included so the doctests in filters.py / models.py run too. The
+# three Telethon-importing modules are skipped: they need a real dependency
+# and a session, and there's nothing doctestable in them.
+testpaths = ["tests", "src"]
+addopts = [
+    "-q",
+    "--doctest-modules",
+    "--ignore=src/tg_downloader/app.py",
+    "--ignore=src/tg_downloader/cli.py",
+    "--ignore=src/tg_downloader/telegram.py",
+    "--ignore=src/tg_downloader/__main__.py",
+]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 96
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

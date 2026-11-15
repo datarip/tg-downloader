@@ -1,0 +1,5 @@
+#!/bin/sh
+# AppImage entry point. The bundle root holds this script, the desktop file and
+# the icon; the PyInstaller onedir tree lives under usr/bin/TDM.
+HERE="$(dirname "$(readlink -f "$0")")"
+exec "$HERE/usr/bin/TDM/TDM" "$@"

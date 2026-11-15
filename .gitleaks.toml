@@ -1,0 +1,39 @@
+# gitleaks configuration for TDM.
+#
+# Run over the working tree with `gitleaks detect` (or `gitleaks git`) after
+# installing gitleaks; CI runs it over the full history with fetch-depth: 0.
+
+title = "TDM"
+
+[extend]
+# Keep gitleaks' own built-in rules (AWS keys, private keys, tokens, …).
+useDefault = true
+
+[[rules]]
+id = "telegram-api-hash"
+description = "Telegram API hash (a 32-character hex secret tied to an account)"
+# TG_API_HASH=… in an env file, and api_hash = "…" in JSON or Python.
+regex = '''(?i)(?:tg_)?api[_ ]?hash["']?\s*[:=]\s*["']?([0-9a-f]{32})["']?'''
+secretGroup = 1
+keywords = ["api_hash", "api hash", "tg_api_hash"]
+tags = ["telegram", "secret"]
+
+[[rules]]
+id = "telegram-session-string"
+description = "Telethon StringSession payload"
+regex = '''1[A-Za-z0-9_-]{300,}'''
+keywords = ["StringSession", "session_string"]
+tags = ["telegram", "secret"]
+
+[[allowlists]]
+description = "Documented placeholders and example values"
+paths = [
+  '''README\.md''',
+  '''\.env\.example''',
+  '''CONTRIBUTING\.md''',
+]
+
+[[allowlists]]
+description = "Placeholder API hash used in docs and examples"
+regexTarget = "match"
+regexes = ['''0123456789abcdef0123456789abcdef''']

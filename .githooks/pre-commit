@@ -1,0 +1,12 @@
+#!/bin/sh
+# pre-commit hook — refuse staged secrets and personal data.
+#
+# Runs scripts/public_audit.py against the index, not the working tree, so what
+# is checked is exactly what would enter history. Stdlib-only and no `uv`, so it
+# works on a fresh clone and in CI. Wired up via `git config core.hooksPath
+# .githooks`.
+#
+# A genuine false positive is fixed by narrowing the rule in the audit script
+# with a comment saying why it is safe. Do not bypass with --no-verify.
+
+exec python3 scripts/public_audit.py --staged

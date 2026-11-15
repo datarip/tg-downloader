@@ -1,0 +1,84 @@
+name: Release
+
+# A tag is the only thing that publishes. `workflow_dispatch` runs verify and
+# build so the pipeline can be inspected before a tag exists, and it never
+# publishes: there is no tag to attach a release to.
+#
+# A dry run of one platform is cheaper: run the "Build installers" workflow
+# directly from the Actions tab.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # No setup-python: the script is stdlib-only, and ubuntu-22.04 has
+      # python3. That keeps one third-party action out of the release path.
+      - name: Check tag, version and changelog
+        id: v
+        env:
+          REF: ${{ github.ref_name }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            out=$(python3 scripts/check_version.py)
+          else
+            out=$(python3 scripts/check_version.py "$REF")
+          fi
+          echo "$out" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: build
+    needs: verify
+    uses: ./.github/workflows/build.yml
+    with:
+      version: ${{ needs.verify.outputs.version }}
+
+  publish:
+    name: publish
+    needs: [verify, build]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-22.04
+    # The only job in the repository allowed to write. An approval rule on this
+    # environment is the place to gate a release by hand. `actions: read` is
+    # needed by download-artifact: naming any permission sets the rest to none.
+    environment: release
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Checksums
+        run: |
+          set -euo pipefail
+          cd artifacts
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" artifacts/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "TDM ${GITHUB_REF_NAME#v}" \
+            --generate-notes

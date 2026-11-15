@@ -1,0 +1,74 @@
+name: Build installers
+
+# Reusable workflow: release.yml calls it with the tag's version, and
+# workflow_dispatch runs a production-free dry run from the Actions tab.
+# Each job builds the GUI on its own OS, smoke-tests the frozen app, then
+# wraps it in the platform installer.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        required: true
+        type: string
+        default: "0.0.0-dev"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-2025, target: windows-x64 }
+          - { os: macos-15, target: macos-arm64 }
+          - { os: ubuntu-22.04, target: linux-x64 }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.8"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv python install 3.12
+      # No dev group: pytest and ruff are not needed to build. --locked fails
+      # when uv.lock is stale, which is the point.
+      - run: uv sync --locked --no-dev --group packaging
+
+      - name: Install xvfb (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      # Builds, then runs the frozen app's --self-check, which opens a real Tk
+      # root and refuses a bundle without the native cryptg backend.
+      - name: Build and smoke-test
+        run: uv run python packaging/build.py --version "${{ inputs.version }}"
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./packaging/windows/package.ps1 -Version "${{ inputs.version }}"
+
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        run: bash packaging/macos/make_dmg.sh "${{ inputs.version }}"
+
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: bash packaging/linux/make_appimage.sh "${{ inputs.version }}"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tdm-${{ matrix.target }}
+          path: dist/release/*
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,72 @@
+name: CI
+
+# Runs on the two long-lived branches and on every pull request. The branch
+# names go live in Phase 6, when the repository switches from `master` to
+# `main` plus `release`; before that this file does nothing.
+
+on:
+  push:
+    branches: [main, release]
+  pull_request:
+
+# Read-only by default. No job here needs to write to the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # The oldest hosted image is the one that keeps the Linux artifact's
+        # glibc floor at 2.28 (set by the cryptg wheel); see packaging/build.py.
+        os: [ubuntu-22.04, windows-2025, macos-15]
+    steps:
+      # Pinned to a commit SHA, with the release in the comment so Dependabot
+      # can keep it current. `v*` tags are mutable and would be a supply-chain
+      # hole in a public repo.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.8"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv python install 3.12
+      # --locked fails when uv.lock is stale, which is the point.
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest
+
+  public-audit:
+    name: public-audit
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: python3 scripts/public_audit.py --tracked
+
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The whole history, so a secret removed from HEAD is still found.
+          fetch-depth: 0
+      # Free for personal accounts; an organisation needs a GITLEAKS_LICENSE
+      # secret. If that ever blocks a run, replace this step with a pinned
+      # gitleaks binary download and `gitleaks detect --redacted`.
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+          # No write permissions here, so no PR comment and no SARIF upload.
+          # A finding still fails the job through the action's exit code.
+          GITLEAKS_ENABLE_COMMENTS: "false"
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=TDM
+GenericName=Telegram File Downloader
+Comment=Download files from your Telegram groups
+Exec=TDM
+Icon=tdm
+Terminal=false
+Categories=Network;FileTransfer;Utility;
+Keywords=telegram;download;files;

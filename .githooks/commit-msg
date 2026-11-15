@@ -1,0 +1,45 @@
+#!/bin/sh
+# commit-msg hook — reject AI-agent attribution in commits.
+#
+# Enforces the repository's no-attribution rule: no coding agent may appear as
+# author, co-author, or anywhere in the commit tree. Blocks both the commit
+# message and the author/committer identity.
+#
+# Wired up via `git config core.hooksPath .githooks` (see repo setup). To bypass
+# in a genuine false-positive, commit with --no-verify.
+
+msg_file="$1"
+
+# Strip comment lines / the verbose diff exactly as git will before committing.
+msg="$(git stripspace --strip-comments < "$msg_file")"
+author="$(git var GIT_AUTHOR_IDENT 2>/dev/null)"
+committer="$(git var GIT_COMMITTER_IDENT 2>/dev/null)"
+
+fail() {
+  echo "" >&2
+  echo "✖ commit blocked: $1" >&2
+  echo "  This repo forbids AI-agent attribution in commits." >&2
+  echo "  Remove the offending text/identity, then commit again." >&2
+  echo "" >&2
+  exit 1
+}
+
+# 1. Attribution trailers / phrases — agent-agnostic red flags.
+if printf '%s' "$msg" | grep -iEq 'co-authored-by:|generated (with|by)|assisted[ -]by|written by|🤖|noreply@anthropic\.com'; then
+  fail "attribution trailer/phrase found in commit message"
+fi
+
+# 2. Distinctive agent brand names anywhere in the message (low false-positive).
+NAMES='claude|anthropic|copilot|devin|aider|codeium|windsurf|codewhisperer|tabnine|ghostwriter|sourcegraph cody|amazon q|roo code|\bcline\b'
+if printf '%s' "$msg" | grep -iEq "($NAMES)"; then
+  fail "AI-agent name found in commit message"
+fi
+
+# 3. Ambiguous names (cursor, gpt, gemini, …) — checked only in the author /
+#    committer identity, where a false positive is implausible.
+IDENT_NAMES="$NAMES|cursor|chatgpt|openai|gpt-?[0-9]|gemini|codex|bolt\.new|v0\.dev|replit"
+if printf '%s\n%s' "$author" "$committer" | grep -iEq "($IDENT_NAMES)"; then
+  fail "AI-agent name found in author/committer identity"
+fi
+
+exit 0

@@ -1,0 +1,56 @@
+name: Feature request
+description: Suggest a capability or an improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the README's limitations and to-do list first: some requests are
+        already planned, and some are blocked by Telegram rather than by TDM.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues and the README before writing this.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do that TDM makes hard or impossible today?
+      placeholder: I scan the same 40 channels weekly and have to re-tick the same files every time.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like
+      description: Describe the behaviour you want, from the user's side.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Existing workarounds, other tools, or a smaller change that would be enough.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Scanning and the file list
+        - Downloading and the queue
+        - Channels and favourites
+        - Settings and configuration
+        - Backup and export
+        - CLI
+        - Packaging and installation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Screenshots are welcome, as long as they contain no account identity, private chat titles or third-party filenames.

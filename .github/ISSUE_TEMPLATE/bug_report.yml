@@ -1,0 +1,95 @@
+name: Bug report
+description: Report something that does not work as documented
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before you paste anything: **remove your `api_hash`, your login code,
+        your session file and any private chat titles or filenames.** This issue
+        is public and permanent. Security problems go through
+        [SECURITY.md](https://github.com/datarip/tg-downloader/blob/main/SECURITY.md),
+        not here.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I am running the latest release, or the latest commit on `main`.
+          required: true
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: This report contains no credentials, session data or private chat content.
+          required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS 15 or later (Apple Silicon)
+        - macOS 14 or earlier (Apple Silicon)
+        - Linux (AppImage)
+        - Linux (tarball)
+        - Linux (from source)
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: TDM version
+      description: The version shown in the app, or the output of `tg-downloader --version`.
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install it?
+      options:
+        - Prebuilt installer
+        - From source with uv
+        - Other (explain below)
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The shortest sequence that shows the problem.
+      placeholder: |
+        1. Scan a channel with …
+        2. Tick three files, press Start
+        3. Pause, then resume
+        4. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: Include the exact error shown in the app, and the status or Error column.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log excerpt
+      description: |
+        Relevant lines from the run log (`~/.tg_downloader/tg_downloader.log`, on
+        Windows `%USERPROFILE%\.tg_downloader\tg_downloader.log`). Scrub paths and
+        filenames you do not want public.
+      render: text
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Network conditions, Telegram account type (free or Premium), proxy, and so on.

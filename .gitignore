@@ -1,0 +1,56 @@
+# Never commit these — a .session file is a live login to your Telegram account
+*.session
+*.session-journal
+config.json
+
+# Credentials and channel ids live here
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Downloads, in case anyone points the output dir inside the repo
+downloads/
+*.part
+*.part.idx
+
+# Build and packaging output (never commit an installer)
+*.dmg
+*.AppImage
+packaging/build/
+packaging/out/
+# Generated from the build version by packaging/build.py
+packaging/windows/version_info.txt
+
+# Local run logs
+*.log
+
+# Implementation plans (past and future) stay local. Only general documentation
+# belongs in docs/ and in git — see AGENTS.md.
+docs/implementation-plan/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Local agent config and settings — per-developer, never commit
+.claude/
+
+# Local agent guidance — stays on this machine, never published
+AGENTS.md
