@@ -45,13 +45,14 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 
-# libgcc_s.so.1 is collected from the build host, and Ubuntu 22.04's copy needs
-# glibc 2.35. Shipping it would drag the whole bundle's glibc floor up from the
-# 2.28 that the cryptg wheel sets. Every glibc distribution ships its own
-# libgcc_s, so drop ours and let the target system provide it.
-a.binaries = [
-    entry for entry in a.binaries if Path(entry[0]).name != "libgcc_s.so.1"
-]
+# Host libraries to leave to the target system. PyInstaller copies these from
+# the Ubuntu 22.04 runner, and they are built against glibc 2.34/2.35, which
+# would raise the bundle's floor above the 2.28 that the cryptg wheel sets.
+# Every glibc desktop ships them, and the dependency graph that
+# packaging/build.py prints when the floor is exceeded shows nothing inside the
+# bundle needing libssl.
+SYSTEM_LIBS = {"libgcc_s.so.1", "libssl.so.3", "libcrypto.so.3"}
+a.binaries = [entry for entry in a.binaries if Path(entry[0]).name not in SYSTEM_LIBS]
 
 exe = EXE(
     pyz,
