@@ -37,6 +37,13 @@ path = "src/tg_downloader/__init__.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/tg_downloader"]
 
+[tool.uv]
+# Pin dependency resolution to a fixed cutoff. Without this, a lock generated on
+# a machine that sets exclude-newer (a user-level supply-chain policy) differs
+# from what CI resolves, and `uv sync --locked` fails. Bump the date deliberately
+# when adding or upgrading a dependency.
+exclude-newer = "2026-11-08"
+
 [tool.pytest.ini_options]
 # `src` is included so the doctests in filters.py / models.py run too. The
 # three Telethon-importing modules are skipped: they need a real dependency
