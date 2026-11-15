@@ -101,6 +101,23 @@ def highest_glibc(objdump_output: str) -> tuple[int, int] | None:
     return max(found) if found else None
 
 
+def needed_libraries(objdump_output: str) -> list[str]:
+    """``DT_NEEDED`` library names from ``objdump -p`` output."""
+    return re.findall(r"\bNEEDED\s+(\S+)", objdump_output)
+
+
+def _objdump(objdump: str, *args: str, path: Path) -> str:
+    """Run objdump, returning stdout. Unreadable files yield an empty string."""
+    proc = subprocess.run(
+        [objdump, *args, str(path)],
+        capture_output=True,
+        text=True,
+        errors="replace",
+        check=False,
+    )
+    return proc.stdout
+
+
 def check_glibc_floor() -> None:
     """Report the bundle's glibc floor, and fail when it is above the promise.
 
@@ -119,18 +136,16 @@ def check_glibc_floor() -> None:
     for path in sorted((DIST / "TDM").rglob("*")):
         if not path.is_file() or path.is_symlink():
             continue
-        proc = subprocess.run(
-            [objdump, "-T", str(path)],
-            capture_output=True,
-            text=True,
-            errors="replace",
-            check=False,
-        )
-        required = highest_glibc(proc.stdout)
+        required = highest_glibc(_objdump(objdump, "-T", path=path))
         if required and required > worst:
             worst, source = required, path.name
     print(f"glibc floor: {worst[0]}.{worst[1]:02d} (from {source})")
     if worst > GLIBC_FLOOR:
+        for path in sorted((DIST / "TDM").rglob("*")):
+            if not path.is_file() or path.is_symlink():
+                continue
+            if source in needed_libraries(_objdump(objdump, "-p", path=path)):
+                print(f"  {source} is needed by {path.relative_to(DIST)}")
         raise SystemExit(
             f"glibc floor: the bundle needs {worst[0]}.{worst[1]:02d}, above the "
             f"documented {GLIBC_FLOOR[0]}.{GLIBC_FLOOR[1]:02d}. Update the README, "

@@ -30,6 +30,17 @@ def test_highest_glibc_ignores_other_symbols() -> None:
     assert build.highest_glibc("") is None
 
 
+def test_needed_libraries_reads_dt_needed() -> None:
+    output = """
+Dynamic Section:
+  NEEDED               libc.so.6
+  NEEDED               libcrypto.so.3
+  RUNPATH              /none
+"""
+    assert build.needed_libraries(output) == ["libc.so.6", "libcrypto.so.3"]
+    assert build.needed_libraries("no dynamic section") == []
+
+
 def test_version_quad_pads_to_four_numbers() -> None:
     assert build.version_quad("0.1.0") == "0, 1, 0, 0"
     assert build.version_quad("2.0") == "2, 0, 0, 0"
