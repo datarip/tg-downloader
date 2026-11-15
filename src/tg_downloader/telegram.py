@@ -14,7 +14,7 @@ from pathlib import Path
 from telethon import TelegramClient, utils
 from telethon.tl.functions.upload import GetFileRequest
 
-from .config import SESSION_PATH
+from .config import SESSION_PATH, lock_down
 from .errors import ConnectionLost, RateLimited, classify, log
 from .filters import matched_extension
 from .models import FileItem
@@ -30,6 +30,26 @@ _TG_PROBE_FALLBACK = ("149.154.167.50", 443)
 
 class CredentialsMissing(RuntimeError):
     """Raised when api_id / api_hash haven't been configured yet."""
+
+
+#: Files Telethon may create next to the session: the SQLite database plus its
+#: journal, write-ahead log and shared-memory sidecars. All of them can carry
+#: the auth key, so they all get the owner-only mode.
+_SESSION_SUFFIXES = ("", ".session", "-journal", "-wal", "-shm")
+
+
+def _secure_session_file(session: str | Path) -> None:
+    """Make the saved Telegram login readable only by its owner.
+
+    Telethon creates the session file with the process umask, so on a normal
+    desktop it lands as ``0644`` while every other secret file in
+    ``~/.tg_downloader`` is ``0600``. The session grants full access to the
+    account, so it belongs in the same class as the api_hash.
+    """
+    base = Path(session).expanduser()
+    for path in (Path(f"{base}{suffix}") for suffix in _SESSION_SUFFIXES):
+        if path.is_file():
+            lock_down(path)
 
 
 #: Default ``flood_sleep_threshold`` (seconds). Telethon sleeps flood / premium
@@ -247,6 +267,7 @@ async def build_client(
     if password is not None:
         kwargs["password"] = password
     await client.start(**kwargs)
+    _secure_session_file(session)
     return client
 
 
@@ -277,6 +298,7 @@ async def connect_if_authorized(
     try:
         await client.connect()
         if await client.is_user_authorized():
+            _secure_session_file(session)
             return client
     except Exception:
         pass

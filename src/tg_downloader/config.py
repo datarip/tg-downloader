@@ -323,6 +323,24 @@ def write_env_file(values: dict[str, str], path: Path | None = None) -> Path:
     return path
 
 
+def lock_down(path: str | Path) -> None:
+    """Restrict a secret file to its owner, on a best-effort basis.
+
+    Every file under ``~/.tg_downloader`` that holds a secret is written with
+    ``chmod 600``. The Telethon session is the exception: Telethon creates it
+    itself with the process umask, so it lands as ``0644`` unless we fix it.
+    That file is a live login, so it gets the same treatment.
+
+    A filesystem that refuses the change (a mounted share, a Windows volume
+    with no POSIX modes) is left alone rather than failing the run: the file is
+    still usable, and a hard failure here would block every download.
+    """
+    try:
+        Path(path).chmod(0o600)
+    except OSError:
+        pass
+
+
 def _quote(value: str) -> str:
     """Quote if the value would otherwise be misread on the way back in.
 
