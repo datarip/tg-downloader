@@ -141,11 +141,20 @@ def check_glibc_floor() -> None:
             worst, source = required, path.name
     print(f"glibc floor: {worst[0]}.{worst[1]:02d} (from {source})")
     if worst > GLIBC_FLOOR:
-        for path in sorted((DIST / "TDM").rglob("*")):
-            if not path.is_file() or path.is_symlink():
-                continue
-            if source in needed_libraries(_objdump(objdump, "-p", path=path)):
-                print(f"  {source} is needed by {path.relative_to(DIST)}")
+        files = [
+            path
+            for path in sorted((DIST / "TDM").rglob("*"))
+            if path.is_file() and not path.is_symlink()
+        ]
+        bundled = {path.name for path in files}
+        for path in files:
+            edges = [
+                lib
+                for lib in needed_libraries(_objdump(objdump, "-p", path=path))
+                if lib in bundled
+            ]
+            if edges:
+                print(f"  {path.relative_to(DIST)} -> {', '.join(edges)}")
         raise SystemExit(
             f"glibc floor: the bundle needs {worst[0]}.{worst[1]:02d}, above the "
             f"documented {GLIBC_FLOOR[0]}.{GLIBC_FLOOR[1]:02d}. Update the README, "
