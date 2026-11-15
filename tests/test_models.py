@@ -1,6 +1,7 @@
 """Target-path construction — this decides where bytes land on disk."""
 
 import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -250,6 +251,9 @@ def test_download_dir_problem_creates_a_missing_folder(tmp_path):
     assert target.is_dir()  # a first run into a fresh folder still works
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="needs POSIX permission bits, which Windows ignores"
+)
 def test_download_dir_problem_reports_an_unwritable_folder(tmp_path):
     if os.geteuid() == 0:
         pytest.skip("root ignores the permission bits")
@@ -263,6 +267,9 @@ def test_download_dir_problem_reports_an_unwritable_folder(tmp_path):
         locked.chmod(0o700)  # so tmp_path cleanup can remove it
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="needs POSIX permission bits, which Windows ignores"
+)
 def test_download_dir_problem_reports_an_uncreatable_folder(tmp_path):
     # Stand-in for the real case: /Volumes/<drive> after the drive is ejected,
     # where mkdir fails because /Volumes is root-owned.

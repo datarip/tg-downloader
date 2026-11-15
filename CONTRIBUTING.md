@@ -19,8 +19,12 @@ uv sync
 with `uv run tg-downloader`, and the CLI with `uv run tg-download --help`.
 
 Add a runtime dependency with `uv add <package>` and a development one with
-`uv add --dev <package>`. Edit `pyproject.toml` through those commands rather
-than by hand, so `uv.lock` stays in step.
+`uv add --dev <package>`. Edit `pyproject.toml` through those commands, not by
+hand, so `uv.lock` stays in step.
+
+Dependency resolution is capped at the date in `[tool.uv] exclude-newer`, so a
+lock generated here matches one generated in CI. Bump that date deliberately
+when you add or upgrade a package, or the resolver will refuse a newer version.
 
 ## Checks before you open a pull request
 

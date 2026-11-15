@@ -581,10 +581,14 @@ async def _stream_to_part_parallel(
                     w.cancel()
                 await asyncio.gather(*workers, return_exceptions=True)
                 raise
-        idx.unlink(missing_ok=True)  # every part present — drop the sidecar
     finally:
         os.close(part_fd)
         os.close(idx_fd)
+
+    # Only reached on success, when every part is on disk. The handles are closed
+    # first because Windows refuses to delete a file that is still open (WinError
+    # 32), where POSIX would simply unlink it.
+    idx.unlink(missing_ok=True)
 
 
 async def download_item(
