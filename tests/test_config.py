@@ -2,6 +2,7 @@
 
 import json
 import os
+import stat
 import sys
 
 import pytest
@@ -206,3 +207,26 @@ def test_xdg_falls_back_to_home_downloads(monkeypatch, tmp_path):
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "empty-config"))
     assert _xdg_download_dir() == str(tmp_path / "Downloads")
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="POSIX permission bits do not exist on Windows"
+)
+def test_lock_down_makes_a_secret_owner_only(tmp_path):
+    """The session and the env file must not be readable by other local users."""
+    secret = tmp_path / "tg_session.session"
+    secret.write_text("auth key")
+    secret.chmod(0o644)
+
+    config.lock_down(secret)
+
+    assert stat.S_IMODE(secret.stat().st_mode) == 0o600
+
+
+def test_lock_down_ignores_an_unwritable_path(tmp_path):
+    """A filesystem that refuses chmod must not break a download run."""
+    missing = tmp_path / "nope" / "tg_session.session"
+
+    config.lock_down(missing)  # no exception, no file created
+
+    assert not missing.exists()
